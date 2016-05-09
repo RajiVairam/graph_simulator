@@ -44,9 +44,9 @@ std::string& Option::get_usage()
 {
     if (_mUsage.empty()) {
         _mUsage.append(_mName);
-            _mUsage.append(" <");
-            _mUsage.append(__mShortDesc);
-            _mUsage.append(">");
+        _mUsage.append(" <");
+        _mUsage.append(__mShortDesc);
+        _mUsage.append(">");
 
         if (_mDesc.size()){
             _mUsage.append(align());
@@ -82,11 +82,11 @@ std::string& Title::get_usage()
 
 size_t Title::get_sub_option_count()
 {
-   return __mSubOptions.size();
+    return __mSubOptions.size();
 }
 
 void Title::add_sub_option(const std::string& name, const std::string& desc,
-                           const std::string& short_desc, bool required)
+        const std::string& short_desc, bool required)
 {
     // Make the describtion as empty to denote it is sub option
     desc.empty();
@@ -119,7 +119,7 @@ void Cli::add_flag(const std::string& name, const std::string& desc)
 }
 
 void Cli::add_option(const std::string& name, const std::string& desc,
-                     const std::string& short_desc, bool required)
+        const std::string& short_desc, bool required)
 {
     Cmd *cmd = new Option(name, desc, short_desc, required);
     __mOptionList.push_back(cmd);
@@ -136,21 +136,21 @@ Title* Cli::add_title(const std::string& name, const std::string& desc)
 }
 
 void Cli::add_title_sub_option(Title* tptr, const std::string& name,
-                               const std::string& desc,
-                               const std::string& short_desc, bool required)
+        const std::string& desc,
+        const std::string& short_desc, bool required)
 {
-   // Insert in a title and sub option map
-   std::string new_name (tptr->get_name());
-   new_name.append(" ");
-   new_name.append(name);
-   __mCmdNames.insert(std::pair<std::string, bool>(new_name, required));
-   // Call function to add sub option in title class.
-   tptr->add_sub_option(name, desc, short_desc, required);
+    // Insert in a title and sub option map
+    std::string new_name (tptr->get_name());
+    new_name.append(" ");
+    new_name.append(name);
+    __mCmdNames.insert(std::pair<std::string, bool>(new_name, required));
+    // Call function to add sub option in title class.
+    tptr->add_sub_option(name, desc, short_desc, required);
 }
 
 // Char** version
 const char* Cli::get_cmd_value(char** arg_start, char** arg_end,
-                               const std::string & option)
+        const std::string & option)
 {
     // Get option's value by extracing the next
     //  available string in input
@@ -174,7 +174,7 @@ const char* Cli::get_cmd_value(StringList& sList, const std::string& option)
 }
 
 bool Cli::cmd_exists(char** arg_start, char** arg_end,
-                     const std::string& option)
+        const std::string& option)
 {
     // Check and return whether the current option
     // is in input or not
@@ -265,10 +265,10 @@ bool Cli::parse_cmds(std::string& buf)
         std::string name;
         size_t pos = (nIter->first).find(" ");
         if (pos != std::string::npos) {
-           name = (nIter->first).substr(pos+1);
+            name = (nIter->first).substr(pos+1);
         }
         else {
-           name = (nIter->first);
+            name = (nIter->first);
         }
 
         if (std::find(argv.begin(), argv.end(), name) != argv.end()) {
@@ -276,7 +276,7 @@ bool Cli::parse_cmds(std::string& buf)
             if(!nIter->second) {
                 // Update value as empty
                 __mValues.insert(std::pair<std::string, std::string>
-                                 (name, ""));
+                        (name, ""));
             }
             else { // If required get the value from input
                 const char * value = get_cmd_value(argv, name);
@@ -318,7 +318,7 @@ void update_available_option(Cli* cli)
     // create_graph -max_node [MAX_NODE] -max_edge [MAX_EDGE]  Create new graph with given max node and max edge
     //
     Title* title = cli->add_title("create_graph",
-                          "Create new graph with given max node and max edge");
+            "Create new graph with given max node and max edge");
     cli->add_title_sub_option(title, "-max_node", "", "MAX_NODE", true);
     cli->add_title_sub_option(title, "-max_edge", "", "MAX_EDGE", true);
 
@@ -330,10 +330,10 @@ void update_available_option(Cli* cli)
 
     // Delete Node
     cli->add_option("delete_node", "Delete the given node from the graph",
-                    "NODE_ID", true);
+            "NODE_ID", true);
     // Add Edge
     title = cli->add_title("add_edge",
-                           "Add a new edage to the graph b/w src and dest");
+            "Add a new edage to the graph b/w src and dest");
     cli->add_title_sub_option(title, "-src_node", "", "SRC_NODE_ID", true);
     cli->add_title_sub_option(title, "-dest_node", "", "DEST_NODE_ID", true);
     cli->add_title_sub_option(title, "-weight", "", "WEIGHT", true);
@@ -345,7 +345,7 @@ void update_available_option(Cli* cli)
 
     // start flow
     title = cli->add_title("start_flow",
-                           "Start data flow b/w src and dest for given duration (in sec)");
+            "Start data flow b/w src and dest for given duration (in sec)");
     cli->add_title_sub_option(title, "-src_node", "", "SRC_NODE_ID", true);
     cli->add_title_sub_option(title, "-dest_node", "", "DEST_NODE_ID", true);
     cli->add_title_sub_option(title, "-time", "", "DURATION", true);

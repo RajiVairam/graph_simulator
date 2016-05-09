@@ -88,6 +88,9 @@ void start_batch_mode(Cli* cli, const char* file)
     }
     std::string str;
     while (std::getline(infile, str)) {
+        // Trimming white spaces
+        str.erase(0, str.find_first_not_of(" \n\r\t"));
+        str.erase(str.find_last_not_of(" \n\r\t")+1);
         if(str.size()) {
             cli->reset_values();
             parse_cmd_and_execute(cli, str);

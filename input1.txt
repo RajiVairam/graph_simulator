@@ -1,0 +1,13 @@
+create_graph -max_node 11 -max_edge 100
+add_edge -src_node 11234 -dest_node 5663 -weight 1
+add_edge -src_node 5663 -dest_node 9216 -weight 1
+add_edge -src_node 9216 -dest_node 8002 -weight 1
+add_edge -src_node 8002 -dest_node 4444 -weight 1
+add_edge -src_node 4444 -dest_node 2022 -weight 1
+add_edge -src_node 2022 -dest_node 7214 -weight 1
+add_edge -src_node 7214 -dest_node 5 -weight 1
+add_edge -src_node 5 -dest_node 47 -weight 1
+add_edge -src_node 47 -dest_node 100 -weight 1
+add_edge -src_node 100 -dest_node 11234 -weight 1
+start_flow -src_node 100 -dest_node 47 -time 20
+
