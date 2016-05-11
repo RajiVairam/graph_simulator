@@ -17,15 +17,15 @@ $(BIN): $(GRAPH_LIBRARY) $(CLI_LIBRARY) main.o
 	$(CC) $(LDFLAGS) -o $@ main.o -lgraph -lcli
 
 $(GRAPH_LIBRARY): graph.o
-	$(CC) -shared -o $@ $^ 
-	
+	$(CC) -shared -o $@ $^
+
 $(CLI_LIBRARY): cli.o
 	$(CC) -shared -o $@ $^
 
 %.cpp : %.h
 
 %.o: %.cpp
-	$(CC) $(CPPFLAGS) -c $< 
+	$(CC) $(CPPFLAGS) -c $<
 
 .PHONY: clean
 

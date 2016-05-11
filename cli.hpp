@@ -49,11 +49,11 @@ class Flag : public Cmd
                 const std::string& desc)
             :
                 Cmd(name, desc)
-    {
+        {
 
-    }
-
+        }
         ~Flag(){};
+
         // Drived class implementation
         std::string& get_usage();
 };
@@ -75,11 +75,10 @@ class Option : public Cmd
                 bool required = true)
             :
                 Cmd(name, desc)
-    {
-        __mShortDesc = short_desc;
-        __mRequiredValue = required;
-    }
-
+        {
+            __mShortDesc = short_desc;
+            __mRequiredValue = required;
+        }
         ~Option(){};
 
         std::string& get_usage();
@@ -100,10 +99,9 @@ class Title : virtual public Cmd
                 const std::string& desc)
             :
                 Cmd(name, desc)
-    {
+        {
 
-    }
-
+        }
         ~Title(){};
 
         std::string& get_usage();
@@ -173,6 +171,7 @@ class Cli
         // parsing user inputs
         bool parse_cmds(std::string&);
 };
+
 // Update command static information
 void update_available_option(Cli*);
 

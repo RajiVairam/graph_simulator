@@ -144,6 +144,7 @@ void Cli::add_title_sub_option(Title* tptr, const std::string& name,
     new_name.append(" ");
     new_name.append(name);
     __mCmdNames.insert(std::pair<std::string, bool>(new_name, required));
+
     // Call function to add sub option in title class.
     tptr->add_sub_option(name, desc, short_desc, required);
 }
@@ -291,6 +292,7 @@ bool Cli::parse_cmds(std::string& buf)
             }
         }
     }
+
     // If some options is updated, then look for
     // sub options of all titles
     if (__mValues.size()) {

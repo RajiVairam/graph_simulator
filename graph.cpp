@@ -59,8 +59,8 @@ void Edge::print_statistics()
     edge.append(itos(__mSrc->getId()));
     edge.append("--->");
     edge.append(itos(__mDest->getId()));
-    Log::_mCout << center(edge,12) << _mDelimiter;
-    Log::_mCout << center(Log::itos(__mWeight),20) << _mDelimiter;
+    Log::_mCout << center(edge,20) << _mDelimiter;
+    Log::_mCout << center(Log::itos(__mWeight),18) << _mDelimiter;
     Log::_mCout << *(dynamic_cast<EdgeSimualtionProperty*>(this));
 }
 
@@ -93,18 +93,22 @@ void Node::add_outgoing_edge(Edge* out_edge)
 }
 
 // Remove the edges that links to given node
-void Node::remove_edge_with_node(Node& anode)
+void Node::remove_edge_with_node(Node& anode, ADJNODETYPE type=ALL)
 {
-    for (int i= 0; i < __mInEdges.size(); ++i) {
-        if (__mInEdges[i]->is_node_src(&anode)) {
-            __mInEdges.erase(__mInEdges.begin()+i);
-            break;
+    if((type == IN)||(type == ALL)) {
+        for (int i= 0; i < __mInEdges.size(); ++i) {
+            if (__mInEdges[i]->is_node_src(&anode)) {
+                __mInEdges.erase(__mInEdges.begin()+i);
+                break;
+            }
         }
     }
-    for (int i= 0; i < __mOutEdges.size(); ++i) {
-        if (__mOutEdges[i]->is_node_dest(&anode)) {
-            __mOutEdges.erase(__mOutEdges.begin()+i);
-            break;
+    if((type == OUT)||(type == ALL)) {
+        for (int i= 0; i < __mOutEdges.size(); ++i) {
+            if (__mOutEdges[i]->is_node_dest(&anode)) {
+                __mOutEdges.erase(__mOutEdges.begin()+i);
+                break;
+            }
         }
     }
 }
@@ -151,34 +155,66 @@ size_t Node::get_in_edges_capacity()
 {
     size_t capacity = 0;
     for (int i=0; i < __mInEdges.size(); ++i) {
-        capacity += __mInEdges[i]->get_current_capacity();
+        capacity += __mInEdges[i]->get_weight();
     }
     return capacity;
 }
 
 //Get the edge that links the current node with given node
-Edge* Node::get_edge_with_node(Node &node)
+Edge* Node::get_edge_with_node(Node &node, ADJNODETYPE type=ALL)
 {
-    for (int i= 0; i < __mInEdges.size(); ++i) {
-        if (__mInEdges[i]->is_node_src(&node)) {
-            return (__mInEdges[i]);
+    if((type == IN)||(type == ALL)) {
+        for (int i= 0; i < __mInEdges.size(); ++i) {
+            if (__mInEdges[i]->is_node_src(&node)) {
+                return (__mInEdges[i]);
+            }
         }
     }
-    for (int i= 0; i < __mOutEdges.size(); ++i) {
-        if (__mOutEdges[i]->is_node_dest(&node)) {
-            return (__mOutEdges[i]);
+    if((type == OUT)||(type == ALL)) {
+        for (int i= 0; i < __mOutEdges.size(); ++i) {
+            if (__mOutEdges[i]->is_node_dest(&node)) {
+                return (__mOutEdges[i]);
+            }
         }
     }
 
     return NULL;
 }
 
+// print the node statistics
 void Node::print_statistics()
 {
-    Log::_mCout << Log::center(Log::itos(__mId), 10) << _mDelimiter; 
+    Log::_mCout << Log::center(Log::itos(__mId), 10) << _mDelimiter;
     Log::_mCout << *(dynamic_cast<NodeSimualtionProperty*>(this));
 
 }
+
+// Get the out edges list
+EdgeList Node::get_out_edge_list()
+{
+    return __mOutEdges;
+}
+
+// Get the in edges list
+EdgeList Node::get_in_edge_list()
+{
+    return __mInEdges;
+}
+
+void Node::reset_edge_counters()
+{
+    for (int i=0; i < __mInEdges.size(); ++i) {
+        __mInEdges[i]->set_no_of_pkts_transferred(0);
+        __mInEdges[i]->set_total_pkts_transferred(0);
+    }
+
+    for (int i=0; i < __mOutEdges.size(); ++i) {
+        __mOutEdges[i]->set_no_of_pkts_transferred(0);
+        __mOutEdges[i]->set_total_pkts_transferred(0);
+    }
+
+}
+
 /**********************************************************************
  *                     Graph class methods                              *
  **********************************************************************/
@@ -192,16 +228,20 @@ void Graph::add_edge(NodeID src_id, NodeID dest_id, EdgeWeight weight)
     Node* dest = get_node_from_id(dest_id);
     // Add source and destination node if not exists
     if(src == NULL){
-        add_node(src_id);
+        if(!add_node(src_id)){
+            return;
+        }
         src = get_node_from_id(src_id);
     }
     if(dest == NULL){
-        add_node(dest_id);
+        if(!add_node(dest_id)){
+            return;
+        }
         dest = get_node_from_id(dest_id);
     }
 
     // Create edage
-    Edge* edge = src->get_edge_with_node(*dest);
+    Edge* edge = src->get_edge_with_node(*dest, OUT);
     if(edge == NULL){
         edge = new Edge(weight, src, dest);
         // Updating edges information in nodes
@@ -217,22 +257,25 @@ void Graph::add_edge(NodeID src_id, NodeID dest_id, EdgeWeight weight)
 
 // Add new node. If maximum node is created already
 // then it won't create
-// NOTE: The maximun edges constraint is used yet.
-void Graph::add_node(NodeID node_id)
+// NOTE: The maximun edges constraint yet to be added
+bool Graph::add_node(NodeID node_id)
 {
-    Node* node = new Node(node_id);
     if(__mNodes.size() < __mMaxNodes){
+        Node* node = new Node(node_id);
         __mNodes.insert(std::pair<NodeID, Node*>(node_id, node));
+        return true;
     }
     else{
-        std::cout << "\nError :Maximum nodes are added already\n";
+        std::cout << "\nError: Maximum nodes are added already\n";
+        return false;
     }
 }
 
 // Remove edge b/w given src and dest
 void Graph::delete_edge(Node& src_node, Node& dest_node)
 {
-    src_node.remove_edge_with_node(dest_node);
+    src_node.remove_edge_with_node(dest_node, OUT);
+    dest_node.remove_edge_with_node(src_node, IN);
 }
 
 // Remove edge (id version)
@@ -267,7 +310,7 @@ void Graph::delete_node(Node& node)
     for (int i = 0; i < adj_list.size(); ++i) {
         NodeListIter nIter = __mNodes.find(adj_list[i]);
         if (nIter != __mNodes.end()) {
-            (nIter->second)->remove_edge_with_node(node);
+            (nIter->second)->remove_edge_with_node(node, ALL);
         }
     }
     node.unlink_all_edges();
@@ -357,40 +400,13 @@ Node* Graph::get_node_from_id(NodeID node_id)
 /**********************************************************************
  *               EdgeSimualtionProperty class methods                 *
  **********************************************************************/
-
 std::ofstream& operator<<(std::ofstream& fOut,
         const EdgeSimualtionProperty& edge)
 {
-    fOut << Log::center(Log::itos(edge._mCurrentCapacity),22) << Log::_mDelimiter;
-    fOut << Log::center(Log::itos(edge._mNoOfPktsTransferred),22) << Log::_mDelimiter;
+    fOut << Log::center(Log::itos(edge._mNoOfPktsTransferred),20) << Log::_mDelimiter;
+    fOut << Log::center(Log::itos(edge._mTotalPktsTransferred),20) << Log::_mDelimiter;
     fOut << "\n";
     return fOut;
-}
-
-EdgeCapacity EdgeSimualtionProperty::get_current_capacity()
-{
-    return _mCurrentCapacity;
-}
-
-void EdgeSimualtionProperty::set_current_capacity(EdgeCapacity capacity)
-{
-    _mCurrentCapacity = capacity;
-}
-
-// Increment/Decrement capacity by given count
-void EdgeSimualtionProperty::increment_current_capacity()
-{
-    _mCurrentCapacity += 1;
-}
-
-void EdgeSimualtionProperty::decrement_current_capacity()
-{
-    if (_mCurrentCapacity > 0){
-        _mCurrentCapacity -= 1;
-    }
-    else{
-        _mCurrentCapacity = 0;
-    } 
 }
 
 size_t EdgeSimualtionProperty::get_no_of_pkts_transferred()
@@ -416,7 +432,23 @@ void EdgeSimualtionProperty::decrement_no_of_pkts_transferred()
     }
     else{
         _mNoOfPktsTransferred = 0;
-    } 
+    }
+}
+
+size_t EdgeSimualtionProperty::get_total_pkts_transferred()
+{
+    return _mTotalPktsTransferred;
+}
+
+void EdgeSimualtionProperty::set_total_pkts_transferred(size_t value)
+{
+    _mTotalPktsTransferred = value;
+}
+
+// Increment/Decrement capacity by given count
+void EdgeSimualtionProperty::increment_total_pkts_transferred()
+{
+    _mTotalPktsTransferred += 1;
 }
 
 /**********************************************************************
@@ -427,7 +459,12 @@ std::ofstream& operator<<(std::ofstream& fOut,
 {
     fOut << Log::center(Log::itos(node._mTotalNoOfPktRecv),23) << Log::_mDelimiter;
     fOut << Log::center(Log::itos(node._mTotalNoOfPktSent),19) << Log::_mDelimiter;
-    fOut << Log::center(Log::itos(node._mNoOfPktToBeSent),24) << Log::_mDelimiter;
+    if(node._mNoOfPktToBeSent == (unsigned int)(-1)){
+        fOut << Log::center("Infinity", 26) << Log::_mDelimiter;
+    }
+    else{
+        fOut << Log::center(Log::itos(node._mNoOfPktToBeSent),26) << Log::_mDelimiter;
+    }
     fOut << "\n";
     return fOut;
 }
@@ -456,7 +493,7 @@ void NodeSimualtionProperty::decrement_no_pkts_to_be_sent()
     }
     else{
         _mNoOfPktToBeSent = 0;
-    } 
+    }
 }
 
 size_t NodeSimualtionProperty::get_total_pkts_sent()
@@ -568,7 +605,7 @@ void Log::print_node_statistics_heading()
     _mCout << center("NODE #", 10) << "|";
     _mCout << center("TOTAL PKTs RECEIVED", 23) << "|";
     _mCout << center("TOTAL PKTs SENT", 19) << "|";
-    _mCout << center("TOTAL PKTs REMAINING", 24) << "|\n";
+    _mCout << center("TOTAL PKTs REMAINING", 26) << "|\n";
     _mCout << fill << "\n";
 }
 
@@ -580,10 +617,10 @@ void Log::print_edge_statistics_heading()
     _mCout << space << "EDGE STATISTICS " << space << "\n";
     _mCout << fill << "\n";
     // Print heading information
-    _mCout << center("Edge", 12) << "|";
-    _mCout << center("ACTUAL CAPACITY", 20) << "|";
-    _mCout << center("CURRENT CAPACITY", 22) << "|";
-    _mCout << center("# PKTs TRANSFERRED", 22) << "|\n";
+    _mCout << center("Edge", 20) << "|";
+    _mCout << center("WEIGHT", 18) << "|";
+    _mCout << center("# PKTs TXed", 20) << "|";
+    _mCout << center("TOTAL PKTs TXed", 20) << "|\n";
     _mCout << fill << "\n";
 }
 
@@ -615,16 +652,19 @@ bool Simulation::update_src_and_dest(NodeID src, NodeID dest)
     file.append(buf);
     file.append(".log");
 
-    if(!Log::open(file)) {  
+    if(!Log::open(file)) {
         std::cout << "\nError: Failed to create log file for flow\n";
         return false;
     }
 
     // Clear the filtered node list of previous flow
     __mNodeSet.clear();
-    __mNodeList.clear();
+
     // Update all nodes that involves in the current flow
     __update_node_set(src, dest);
+
+    // Reset total pkt transferred and received for nodes
+    reset_counters();
 
     if(!__mNodeSet.size()){
         std::cout << "\nInfo : No path to reach destination " << __mDest;
@@ -658,13 +698,7 @@ void Simulation::__update_node_set(NodeID src, NodeID dest)
             NodeID id = nPaths[i][j];
             str.append(Log::itos(id));
             str.append(" ----> ");
-            Node * node = __mGraph->get_node_from_id(id);
-            size_t out_capacity = node->get_out_edges_capacity(); 
-            if(std::find(__mNodeList.begin(), __mNodeList.end(), id) == __mNodeList.end()){
-                __mNodeList.push_back(id);
-            }
-            __mNodeSet.insert(std::pair<NodeID,EdgeCapacity>(id, out_capacity));
-
+            __mNodeSet.insert(id);
         }
         Log::print(str);
         Log::print("\n");
@@ -681,11 +715,13 @@ NodeID Simulation::get_dest()
     return __mDest;
 }
 
+// Print all node statistics
 void Simulation::print_node_statistics()
 {
     Node* node;
-    for (int i = 0; i <__mNodeList.size() ; ++i) {
-        node = __mGraph->get_node_from_id(__mNodeList[i]);
+    std::set<NodeID>::iterator sIter;
+    for (sIter = __mNodeSet.begin(); sIter != __mNodeSet.end(); ++sIter) {
+        node = __mGraph->get_node_from_id(*sIter);
         if(node == NULL){
             continue;
         }
@@ -694,22 +730,51 @@ void Simulation::print_node_statistics()
 
 }
 
+void Simulation::reset_counters()
+{
+    std::set<NodeID>::iterator sIter;
+    for (sIter = __mNodeSet.begin(); sIter != __mNodeSet.end(); ++sIter) {
+        Node* node = __mGraph->get_node_from_id(*sIter);
+        if(node == NULL) {
+            continue;
+        }
+        node->set_total_pkts_received(0);
+        node->set_total_pkts_sent(0);
+        node->set_no_pkts_to_be_sent(0);
+        node->reset_edge_counters();
+    }
+}
+
 // Start the data flow b/w src and dest for given number of cycle
 void Simulation::start(NodeID src, NodeID dest, size_t no_of_cylce)
 {
     if(!update_src_and_dest(src, dest)){
         return;
     }
+
     for (int i = 0; i < no_of_cylce; ++i) {
+        //Print the header info
         Log::print("\n\nCycle : ");
-        Log::print(Log::itos(i));
+        Log::print(Log::itos(i+1));
         Log::print("\n============\n");
+
+        // Start to send the data b/w nodes (phase-1)
         __start_arbitration();
+
+        // Print the edge statistics heading
         Log::print_edge_statistics_heading();
-        __consume_data();
+
+        // Consume the data from nodes(phase-2)
+        __start_consumption();
+
+        // Print node statistics heading
         Log::print_node_statistics_heading();
-        print_node_statistics(); 
+
+        // Print all node statistics
+        print_node_statistics();
     }
+
+    // Print the flow rate b/w src and dest at end of flow
     size_t pkt_sent = __mGraph->get_node_from_id(__mSrc)->get_total_pkts_sent();
     size_t pkt_recv = __mGraph->get_node_from_id(__mDest)->get_total_pkts_received();
     Log::print("\n\nFlow statistics:\n");
@@ -728,140 +793,114 @@ void Simulation::start(NodeID src, NodeID dest, size_t no_of_cylce)
     else{
         Log::print("0.0%\n\n");
     }
-    Log::close(); 
+
+    // Close the log
+    Log::close();
 }
 
-std::map<NodeID, EdgeCapacity>& Simulation::get_node_set()
+// Start arbitration b/w all nodes
+void Simulation::__start_arbitration()
 {
-    return __mNodeSet;
+    Node* node;
+    std::set<NodeID>::iterator sIter;
+
+    // Process each nodes one by one
+    for (sIter = __mNodeSet.begin(); sIter != __mNodeSet.end(); ++sIter) {
+        node = __mGraph->get_node_from_id(*sIter);
+
+        if(node == NULL){
+            continue;
+        }
+
+        // Get the number of pkts to be sent. If it is zero
+        // no need to distribute data
+        size_t no_pkt_tbs = node->get_no_pkts_to_be_sent();
+
+        // Destination node will be excluded as it only receives the data
+        if((no_pkt_tbs > 0)  && (*sIter != __mDest)) {
+            __distribute_data(node, no_pkt_tbs);
+        }
+    }
 }
 
 // Main function to distribute the data b/w all nodes
 void Simulation::__distribute_data(Node* node, size_t no_pkt_tbs)
 {
-    size_t out_capacity = __mNodeSet[node->getId()];
+    EdgeList out_list = node->get_out_edge_list();
 
-    // Get all outgoing adjency list
-    NodeIDList nListOut = node->get_adjency_list(OUT);
-    NodeIDList nListIn;
-    size_t inListSize = 0;
-    // Node version of list
-    std::vector<Node*> NodeListOut, NodeListIn;
+    // Filtered-out the nodes that are not involving in the
+    // data flow and stores remaining
+    EdgeList filtered_out_list;
+    size_t out_capacity = 0;
+    size_t actual_pkt_tbs = no_pkt_tbs;
 
-    // Exclude the incoming edges for src node
-    if (node->getId() != __mSrc){
-        nListIn = node->get_adjency_list(IN);
-        inListSize = nListIn.size();
-    }
-
-    // Get node version of all in and out adjency list
-    for(int i = 0; i < nListOut.size(); ++i) {
-        // Get node for current out node id
-        Node* out_node = __mGraph->get_node_from_id(nListOut[i]);
-        if (out_node == NULL) {
-            continue;
-        }
-        // If the current out node is src or it is not
-        // node set list, then subtracts that node capacity
-        // from out capacity
-        if ((nListOut[i] == __mSrc)  || 
-                (!__mNodeSet.count(nListOut[i]))) {
-            Edge* edge = node->get_edge_with_node(*out_node);
-            if(edge != NULL){
-                out_capacity -= edge->get_weight(); 
-            }
-        }
-        else {
-            // push the out node if it is in the node set
-            // and it is not source
-            NodeListOut.push_back(out_node);
+    for(int i = 0; i < out_list.size(); ++i) {
+        if(__mNodeSet.count(out_list[i]->get_destination_node()->getId())) {
+            out_capacity += out_list[i]->get_weight();
+            out_list[i]->set_no_of_pkts_transferred(0);
+            filtered_out_list.push_back(out_list[i]);
         }
     }
 
-    for(int k = 0; k < nListIn.size(); ++k) {
-        // Get node for current out node id
-        Node* in_node = __mGraph->get_node_from_id(nListIn[k]);
-        if (in_node == NULL) {
-            continue;
-        }
-        // If the current out node is src or it is not
-        // node set list, then subtracts that node capacity
-        // from out capacity
-        if ((nListIn[k] != __mDest)  || 
-                (__mNodeSet.count(nListIn[k]))) {
-            // push the out node if it is in the node set
-            // and it is not source
-            NodeListIn.push_back(in_node);
-        }
-    }
+    size_t out_edge_cout = filtered_out_list.size();
 
-    /*
-       This will do the following
-       1. distribute the total number of pkts to be sent across
-       all outgoing nodes one-by-one
-       2. Update total number of pkts sent in the current node
-       3. Update number of pkts transferred in the outgoing edge
-       4. In parallel, increase the current capcity of incoming node
-       by 1, so that current node can receive data for next cycle
+    while(no_pkt_tbs && out_capacity) {
+        // Divide pockets and send equally across all edges
+        // divide the total pockets to send across all
+        // out edges
+        size_t pkt_divide = no_pkt_tbs/out_edge_cout;
+        for(int k = 0; k < out_edge_cout; ++k) {
 
-       this iwll be repeated until all out nodes capacity over or
-       total number of pkts to be sent is zero
-     */
-    size_t nInListSize = NodeListIn.size();
-    bool pkt_transferred = false;
-    bool all_out_node_processed;
-
-    while (out_capacity && no_pkt_tbs)
-    {
-        all_out_node_processed = true;
-        for (int i = 0, j=0; i < NodeListOut.size(); ++i) {
-            pkt_transferred = false;
-            Edge* InEdge = NULL;
-            Edge* OutEdge  = NodeListOut[i]->get_edge_with_node(*node); 
-            if(OutEdge == NULL){
-                continue;
-            }
-            if(nInListSize){
-                InEdge = NodeListIn[j]->get_edge_with_node(*node);
+            // if the no of pkts to be sent is less the number
+            // of edge count, then send 1 pkt to all nodes until
+            // pkt is available (some edge won't get pkt in this case)
+            if(pkt_divide == 0) {
+                pkt_divide = 1;
             }
 
-            // Ignore capacity check if the out node is destination
-            if (NodeListOut[i]->getId() == __mDest) {
-                OutEdge->increment_no_of_pkts_transferred();
-                pkt_transferred = true;
-                all_out_node_processed = false;
+            size_t weight = filtered_out_list[k]->get_weight();
+            size_t pkt_transferred = filtered_out_list[k]->get_no_of_pkts_transferred();
+            size_t current_weight = weight - pkt_transferred;
+
+            if(current_weight > pkt_divide){
+                pkt_transferred += pkt_divide;
+                filtered_out_list[k]->set_no_of_pkts_transferred(pkt_transferred);
+
+                // Update total pkts transferred
+                size_t total_pkts_transferred =
+                    filtered_out_list[k]->get_total_pkts_transferred();
+                total_pkts_transferred += pkt_divide;
+                filtered_out_list[k]->set_total_pkts_transferred(total_pkts_transferred);
+
+                // Decrment the no of pkts to be sent and out capacity
+                no_pkt_tbs -= pkt_divide;
+                out_capacity -= pkt_divide;
             }
             else {
-                if(OutEdge->get_current_capacity()) {
-                    OutEdge->increment_no_of_pkts_transferred();
-                    OutEdge->decrement_current_capacity();
-                    pkt_transferred = true;
-                    all_out_node_processed = false;
-                }
+                pkt_transferred += current_weight;
+                filtered_out_list[k]->set_no_of_pkts_transferred(pkt_transferred);
+
+                // Update total pkts transferred
+                size_t total_pkts_transferred =
+                    filtered_out_list[k]->get_total_pkts_transferred();
+                total_pkts_transferred += current_weight;
+                filtered_out_list[k]->set_total_pkts_transferred(total_pkts_transferred);
+
+                // Decrment the no of pkts to be sent and out capacity
+                no_pkt_tbs -= current_weight;
+                out_capacity -=  current_weight;
             }
-            if ((!no_pkt_tbs) || (!out_capacity)){
+
+            if((!no_pkt_tbs) || (!out_capacity)) {
                 break;
             }
-
-            // Increase corresponding in edge capacity
-            if(pkt_transferred) {
-                node->increment_total_pkts_sent();
-                --out_capacity;
-                --no_pkt_tbs;
-                if( (InEdge) && 
-                        (InEdge->get_weight() > InEdge->get_current_capacity())){
-                    InEdge->increment_current_capacity();
-                    ++j;
-                    j = (j%nInListSize);
-                }
-            }
         }
-        if(all_out_node_processed){
-            break;
-        }
-
     }
 
+    // Update total number of pkts sent count
+    size_t total_pkt_sent = node->get_total_pkts_sent();
+    total_pkt_sent += (actual_pkt_tbs - no_pkt_tbs);
+    node->set_total_pkts_sent(total_pkt_sent);
 
     // Update the no of pkt to be sent if any remaining
     // so that will be processed in next cycle.
@@ -871,90 +910,55 @@ void Simulation::__distribute_data(Node* node, size_t no_pkt_tbs)
     }
 }
 
-// Start arbitration b/w all nodes (phase -1)
-void Simulation::__start_arbitration()
+// Consume the data (phase-2)
+void Simulation::__start_consumption()
 {
     Node* node;
-    for (int i = __mNodeList.size()-1; i >= 0; --i) {
-        node = __mGraph->get_node_from_id(__mNodeList[i]);
+    std::set<NodeID>::iterator sIter;
+
+    // Process each nodes one by one
+    for (sIter = __mNodeSet.begin(); sIter != __mNodeSet.end(); ++sIter) {
+        node = __mGraph->get_node_from_id(*sIter);
         if(node == NULL){
             continue;
         }
-        size_t no_pkt_tbs = node->get_no_pkts_to_be_sent();
         // Destination node will be excluded as it only receives the data
-        if((no_pkt_tbs > 0)  && (__mNodeList[i] != __mDest)) {
-            __distribute_data(node, no_pkt_tbs);
+        if((*sIter != __mSrc)) {
+            __consume_data(node);
         }
     }
 }
 
-// Consume the data (phase-2)
-void Simulation::__consume_data()
+void Simulation::__consume_data(Node* node)
 {
-    Node* node;
-    NodeIDList nListIn;
-    // Node version of list
-    std::vector<Node*> NodeListIn;
+    EdgeList in_list = node->get_in_edge_list();
 
-    // Print the statistics of all node
-    for (int i = 0; i < __mNodeList.size(); ++i) {
-        node = __mGraph->get_node_from_id(__mNodeList[i]);
-        if(node == NULL){
-            continue;
+    // Filtered-out the nodes that are not involving in the
+    // data flow and stores remaining
+    EdgeList filtered_in_list;
+
+    for(int i = 0; i < in_list.size(); ++i) {
+        if(__mNodeSet.count(in_list[i]->get_destination_node()->getId())) {
+            filtered_in_list.push_back(in_list[i]);
         }
-        // Source node will be excluded as it only sends the data
-        if(__mNodeList[i] != __mSrc) {
-            nListIn.clear();
-            NodeListIn.clear();
+    }
 
-            nListIn = node->get_adjency_list(IN);
+    size_t pkt_received = 0;
+    for(int k = 0; k < filtered_in_list.size(); ++k) {
+        pkt_received += filtered_in_list[k]->get_no_of_pkts_transferred();
+        filtered_in_list[k]->print_statistics();
+        filtered_in_list[k]->set_no_of_pkts_transferred(0);
+    }
+    // Update total number of pkts received count
+    size_t total_pkt_received = node->get_total_pkts_received();
+    total_pkt_received += pkt_received;
+    node->set_total_pkts_received(total_pkt_received);
 
-            // Filter out the in nodes that not involved in the paths
-            for(int j = 0; j < nListIn.size(); ++j) {
-
-                Node* in_node = __mGraph->get_node_from_id(nListIn[j]);
-                if (in_node == NULL) {
-                    continue;
-                }
-                // If the in node is not in the node set
-                // or it is destination
-                if ((nListIn[j] != __mDest)  && (__mNodeSet.count(nListIn[j]))) {
-                    NodeListIn.push_back(in_node);
-                }
-            }
-
-            size_t inListSize = NodeListIn.size();
-            /*
-               It will do the followings:
-               1. update the no of pkt received of current node by checking all
-               its incoming edge
-               2. update the no of the pkt to be sent for current node
-             */
-            size_t no_of_pkt_received = 0;
-            size_t pkts_count  = 0;
-            for (int k = 0; k < NodeListIn.size(); ++k) {
-                Edge* InEdge = NULL;
-                InEdge = NodeListIn[k]->get_edge_with_node(*node);
-                if(InEdge == NULL) {
-                    continue;
-                }
-
-                no_of_pkt_received += InEdge->get_no_of_pkts_transferred();
-                InEdge->print_statistics();
-                InEdge->set_no_of_pkts_transferred(0);
-            }
-            // Update the no of pkts to be transferred
-            if(__mNodeList[i] != __mDest){
-                pkts_count = node->get_no_pkts_to_be_sent();
-                pkts_count += no_of_pkt_received;
-                node->set_no_pkts_to_be_sent(pkts_count);
-            }
-
-            // Update total no of pkts received
-            pkts_count = node->get_total_pkts_received();
-            pkts_count += no_of_pkt_received;
-            node->set_total_pkts_received(pkts_count);
-        }
+    // Update the no of pkt to be sent
+    if (node->getId() != __mDest) {
+        size_t no_pkt_tbs = node->get_no_pkts_to_be_sent();
+        no_pkt_tbs += pkt_received;
+        node->set_no_pkts_to_be_sent(no_pkt_tbs);
     }
 }
 

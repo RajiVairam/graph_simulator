@@ -10,4 +10,3 @@ add_edge -src_node 7 -dest_node 8 -weight 1
 add_edge -src_node 8 -dest_node 9 -weight 1
 add_edge -src_node 9 -dest_node 0 -weight 1
 start_flow -src_node 9 -dest_node 8 -time 20
-
