@@ -5,7 +5,7 @@ BIN := graph_simulator
 CC := g++
 
 CPPFLAGS += -fPIC
-LDFLAGS += -L ./
+LDFLAGS += -L ./ -Wl,-rpath=./
 
 ifeq ($(DEBUG), yes)
 	CPPFLAGS += -g
